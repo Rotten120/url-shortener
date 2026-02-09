@@ -13,9 +13,25 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Visitor {
+  id        String      @id @default(uuid())
+  cookieId  String      @unique
+  createdAt DateTime    @default(now())
+  urls      Url[]
+
+  @@index([cookieId])
+  @@map("visitor")
+}
+
 model Url {
   id        String      @id @default(uuid())
   origUrl   String
   shortCode String      @unique
   createdAt DateTime    @default(now())
+
+  visitorId String?
+  visitor   Visitor?    @relation(fields: [visitorId], references: [cookieId], onDelete: Cascade)
+
+  @@index([shortCode])
+  @@map("url")
 }

@@ -1,16 +1,39 @@
 import express from "express"
+import cookieParser from "cookie-parser"
 import { prisma } from "./prismaClient.js"
 import { nanoid } from "nanoid"
+import { sessionMiddleware } from "./middleware/sessionMiddleware.js" 
 
 const app = express();
 const PORT = process.env.PORT;
 
+app.use(cookieParser());
 app.use(express.json());
+app.use(sessionMiddleware);
 
 app.get("/", (req, res) => {
   res.json({ message: "Hello World!" });
 });
 
+// fetches all the urls made by the user
+app.get("/urls", async (req, res) => {
+  try {
+    const urls = await prisma.url.findMany({
+      where: { visitorId: req.visitorId },
+      select: {
+        shortCode: true,
+        origUrl: true
+      }
+    });
+
+    res.json(urls);
+  } catch(error) {
+    console.log("Error: ", error);
+    res.status(500).json({ message: "An error occurred, process was terminated" });
+  }
+});
+
+// redirects the user to their link (no client side needed)
 app.get("/:shortCode", async (req, res) => {
   const shortCode = req.params.shortCode;
   
@@ -23,33 +46,34 @@ app.get("/:shortCode", async (req, res) => {
   }
 
   res.redirect(url.origUrl);
-})
+});
 
+// core api; shortens the url
 app.post("/shorten", async (req, res) => {
   const origUrl = req.body.url;
   let shortCode = "";
   let isUnique = true;
 
   try {
-  while(isUnique) {
-    shortCode = nanoid(8);
-    isUnique = await prisma.url.findUnique({
-      where: { shortCode }
+    while(isUnique) {
+      shortCode = nanoid(8);
+      isUnique = await prisma.url.findUnique({
+        where: { shortCode }
+      });
+    }
+
+    await prisma.url.create({
+      data: { origUrl, shortCode, visitorId: req.visitorId }
     });
-    console.log(isUnique);
-  }
 
-  await prisma.url.create({
-    data: { origUrl, shortCode }
-  });
-
-  res.json({ message: "Link was successfully shortened", shortCode });
+    res.json({ message: "Link was successfully shortened", shortCode });
   } catch(error) {
     console.log("Error: ", error);
     res.status(500).json({ message: "An error occurred, process was terminated" });
   }
 });
 
+// deletes the url in the database
 app.delete("/:shortCode", async (req, res) => {
   const shortCode = req.params.shortCode;
 
