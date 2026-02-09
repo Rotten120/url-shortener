@@ -1,8 +1,11 @@
 import express from "express"
+import validator from "validator"
 import cookieParser from "cookie-parser"
 import { prisma } from "./prismaClient.js"
 import { nanoid } from "nanoid"
 import { sessionMiddleware } from "./middleware/sessionMiddleware.js" 
+
+// NO RATE LIMITING YET
 
 const app = express();
 const PORT = process.env.PORT;
@@ -55,6 +58,10 @@ app.post("/shorten", async (req, res) => {
   let isUnique = true;
 
   try {
+    if(!validator.isURL(origUrl)) {
+      res.json({ message: "The input is not an URL. Try another" })
+    }
+
     while(isUnique) {
       shortCode = nanoid(8);
       isUnique = await prisma.url.findUnique({
@@ -78,15 +85,15 @@ app.delete("/:shortCode", async (req, res) => {
   const shortCode = req.params.shortCode;
 
   try {
-    await prisma.url.deleteMany({
-      where: { shortCode }
+    const result = await prisma.url.deleteMany({
+      where: { shortCode, visitorId: req.visitorId }
     });
 
     return res.status(204).json({ message: "Shortened link was successfully disabled" });
 
   } catch(error) {
     console.log("Error: ", error);
-    res.status(500).json({ message: "An error occurred, process was terminated" });
+    res.status(500).json({ message: "An error occurred, process was terminated", ...result});
   }
 })
 
