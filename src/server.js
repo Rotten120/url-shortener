@@ -8,7 +8,6 @@ import { sessionMiddleware } from "./middleware/sessionMiddleware.js"
 // NO RATE LIMITING YET
 
 const app = express();
-const PORT = process.env.PORT;
 
 app.use(cookieParser());
 app.use(express.json());
@@ -116,4 +115,9 @@ app.delete("/:shortCode", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+if(process.env.NODE_ENV !== "production") {
+  const PORT = process.env.PORT;
+  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+}
+
+export default app;
