@@ -14,7 +14,7 @@ app.use(express.json());
 app.use(sessionMiddleware);
 
 app.get("/", (req, res) => {
-  res.json({ message: "Hello World!", cookieId: res.visitorId });
+  res.json({ message: "Hello World!", cookieId: req.visitorId });
 });
 
 // fetches all the urls made by the user
