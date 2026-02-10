@@ -29,7 +29,9 @@ app.get("/urls", async (req, res) => {
       }
     });
 
-    res.json(urls);
+    const urlCount = urls.length;
+
+    res.json({ urls, urlCount });
   } catch(error) {
     console.log("Error: ", error);
     res.status(500).json({ message: "An error occurred, process was terminated" });
@@ -48,6 +50,7 @@ app.get("/:shortCode", async (req, res) => {
     return res.status(404).json({ message: "Invalid code" })
   }
 
+  console.log(`User ${req.visitorId} was redirected to ${url.origUrl}`);
   res.redirect(url.origUrl);
 });
 
@@ -59,7 +62,19 @@ app.post("/shorten", async (req, res) => {
 
   try {
     if(!validator.isURL(origUrl)) {
-      res.json({ message: "The input is not an URL. Try another" })
+      return res.status(400).json({ message: "The input is not an URL. Try another" })
+    }
+
+    const urlCount = await prisma.url.count({
+      where: { visitorId: req.visitorId }
+    });
+
+    if(urlCount >= 5) {
+      return res.status(409).json({
+        message: "Maximum number of URLs reached",
+        limit: 5,
+        urlCount
+      });
     }
 
     while(isUnique) {
@@ -73,7 +88,7 @@ app.post("/shorten", async (req, res) => {
       data: { origUrl, shortCode, visitorId: req.visitorId }
     });
 
-    res.json({ message: "Link was successfully shortened", shortCode });
+    res.status(201).json({ message: "Link was successfully shortened", shortCode, urlCount });
   } catch(error) {
     console.log("Error: ", error);
     res.status(500).json({ message: "An error occurred, process was terminated" });
@@ -89,12 +104,16 @@ app.delete("/:shortCode", async (req, res) => {
       where: { shortCode, visitorId: req.visitorId }
     });
 
+    if(result.count === 0) {
+      return res.status(404).json({ message: "Link does not exist" });
+    }
+    
     return res.status(204).json({ message: "Shortened link was successfully disabled" });
 
   } catch(error) {
     console.log("Error: ", error);
-    res.status(500).json({ message: "An error occurred, process was terminated", ...result});
+    res.status(500).json({ message: "An error occurred, process was terminated" });
   }
-})
+});
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
