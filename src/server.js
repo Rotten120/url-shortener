@@ -86,7 +86,8 @@ app.post("/shorten", async (req, res) => {
     await prisma.url.create({
       data: { origUrl, shortCode, visitorId: req.visitorId }
     });
-
+    urlCount += 1;
+    
     res.status(201).json({ message: "Link was successfully shortened", shortCode, urlCount });
   } catch(error) {
     console.log("Error: ", error);
