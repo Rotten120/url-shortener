@@ -28,6 +28,7 @@ export const sessionMiddleware = async (req, res, next) => {
     req.visitorId = visitorId;
     next();
   } catch(error) {
-    next(error);
+    console.log(error);
+    res.sendStatus(500);
   }
 }
