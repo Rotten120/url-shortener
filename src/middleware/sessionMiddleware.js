@@ -3,13 +3,13 @@ import { nanoid } from "nanoid"
  
 export const sessionMiddleware = async (req, res, next) => {
   try {
-    let visitorId = req.cookies?.visitorId??"";
+    let visitorId = req.cookies?.visitorId;
     const visitor = await prisma.visitor.findUnique({
       where: { cookieId: visitorId }
     });
   
     if(!visitor) {
-      visitorId = nanoid(10);
+      visitorId = nanoid(15);
       await prisma.visitor.create({
         data: { cookieId: visitorId }
       });

@@ -14,7 +14,7 @@ app.use(express.json());
 app.use(sessionMiddleware);
 
 app.get("/", (req, res) => {
-  res.json({ message: "Hello World!" });
+  res.json({ message: "Hello World!", cookieId: res.visitorId });
 });
 
 // fetches all the urls made by the user
@@ -64,7 +64,7 @@ app.post("/shorten", async (req, res) => {
       return res.status(400).json({ message: "The input is not an URL. Try another" })
     }
 
-    const urlCount = await prisma.url.count({
+    let urlCount = await prisma.url.count({
       where: { visitorId: req.visitorId }
     });
 
