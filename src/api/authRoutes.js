@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken"
 import { prisma } from "../lib/prismaClient.js"
 import { hashPassword, verifyPassword } from "../lib/auth.js"
 import { setCookie } from "../lib/cookies.js"
-import { authMiddleware } from "../middleware/authMiddleware.js"
+import { identityMiddleware, requireAuth } from "../middleware/identityMiddleware.js"
 
 const router = express.Router();
 
@@ -46,11 +46,36 @@ router.post('/register', async (req, res) => {
 
     const hashedPassword = await hashPassword(password);
 
-    const { id } = await prisma.user.create({
-      data: {email, name, password: hashedPassword} 
+    //migrating cookie data to user
+    let user;
+    const cookieId = req.cookies ?. visitorId ?? "";
+    const visitor = await prisma.visitor.findUnique({
+      where: { cookieId },
+      select: { id: true, ownerId: true }
     });
 
-    const token = await setCookie(res, id);
+    if(visitor) {
+      user = await prisma.user.create({
+        data: {
+          email, name, password: hashedPassword,
+          ownerId: visitor.ownerId
+        },
+        select: { id: true }
+      });
+
+      await prisma.visitor.delete({ where: { id: visitor.id } });
+
+    } else {
+      user = await prisma.user.create({
+        data: {
+          email, name, password: hashedPassword,
+          owner: { create: {} }
+        },
+        select: { id: true }
+      });
+    }
+    
+    const token = await setCookie(res, "token", { userId: user.id });
 
     res.status(201).json({ message: "Account successfully registered", token });
   } catch(error) {
@@ -98,7 +123,7 @@ router.post("/login", async (req, res) => {
       return res.status(409).json({ message: "Email or password is incorrect. Please try again" })
     }
 
-  const token = await setCookie(res, userDB.id)  
+    const token = await setCookie(res, "token", { userId: userDB.id });  
 
     res.json({ message: "Account successfully logged in", token });
   } catch(error) {
@@ -120,7 +145,7 @@ router.post("/login", async (req, res) => {
  *
  */
 router.post("/logout", async (req, res) => {
-  await setCookie(res, "", 0); 
+  await setCookie(res, "token", "", 0); 
   res.send({ message: "Successfully logged out" })
 });
 
@@ -136,8 +161,8 @@ router.post("/logout", async (req, res) => {
  *   }
  *
  */
-router.get("/me", authMiddleware, async (req, res) => {
-  return res.send({ userId: req.user.id });
+router.get("/me", identityMiddleware, requireAuth, async (req, res) => {
+  return res.send({ userId: req.userId });
 });
 
 export default router;

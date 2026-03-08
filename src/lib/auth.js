@@ -9,8 +9,8 @@ export const verifyPassword = async (password, hashedPassword) => {
   return bcrypt.compare(password, hashedPassword);
 }
 
-export const generateToken = async (userId) => {
-  return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: "7d" });
+export const generateToken = async (payload) => {
+  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "7d" });
 }
 
 export const verifyToken = (token) => {

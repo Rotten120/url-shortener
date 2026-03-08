@@ -2,6 +2,7 @@ import express from "express"
 import validator from "validator"
 import { prisma } from "../lib/prismaClient.js"
 import { nanoid } from "nanoid"
+import { requireOwner } from "../middleware/identityMiddleware.js"
 
 const router = express.Router();
 
@@ -9,7 +10,7 @@ const router = express.Router();
 router.get("/urls", async (req, res) => {
   try {
     const urls = await prisma.url.findMany({
-      where: { visitorId: req.visitorId },
+      where: { ownerId: req.ownerId },
       select: {
         shortCode: true,
         origUrl: true
@@ -42,10 +43,10 @@ router.get("/:shortCode", async (req, res) => {
 });
 
 // core api; shortens the url
+// CONSIDER RACE CONDITION BY USING 'FOR UPDATE' AND $transaction
 router.post("/shorten", async (req, res) => {
   const origUrl = req.body.url;
   let shortCode = "";
-  let isUnique = true;
 
   try {
     if(!validator.isURL(origUrl)) {
@@ -53,7 +54,7 @@ router.post("/shorten", async (req, res) => {
     }
 
     let urlCount = await prisma.url.count({
-      where: { visitorId: req.visitorId }
+      where: { ownerId: req.ownerId }
     });
 
     if(urlCount >= 5) {
@@ -64,15 +65,9 @@ router.post("/shorten", async (req, res) => {
       });
     }
 
-    while(isUnique) {
-      shortCode = nanoid(8);
-      isUnique = await prisma.url.findUnique({
-        where: { shortCode }
-      });
-    }
-
+    shortCode = nanoid(10);
     await prisma.url.create({
-      data: { origUrl, shortCode, visitorId: req.visitorId }
+      data: { origUrl, shortCode, ownerId: req.ownerId }
     });
     urlCount += 1;
     
@@ -89,14 +84,14 @@ router.delete("/:shortCode", async (req, res) => {
 
   try {
     const result = await prisma.url.deleteMany({
-      where: { shortCode, visitorId: req.visitorId }
+      where: { shortCode, ownerId: req.ownerId }
     });
 
     if(result.count === 0) {
       return res.status(404).json({ message: "Link does not exist" });
     }
     
-    return res.status(204).json({ message: "Shortened link was successfully disabled" });
+    return res.sendStatus(204);
 
   } catch(error) {
     console.log("Error: ", error);

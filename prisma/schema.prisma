@@ -10,12 +10,12 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  url       = env("DATABASE_URL_LOCAL")
+  //directUrl = env("DIRECT_URL")
 }
 
 model Visitor {
-  id        String      @id @default(uuid()) @db.Uuid
+  id        String      @id @default(uuid())
   cookieId  String      @unique
   createdAt DateTime    @default(now())
 
@@ -27,7 +27,7 @@ model Visitor {
 }
 
 model User {
-  id        String      @id @default(uuid()) @db.Uuid
+  id        String      @id @default(uuid())
   email     String      @unique
   name      String
   password  String
@@ -40,18 +40,18 @@ model User {
 }
 
 model Owner {
-  id        String      @id @default(uuid()) @db.Uuid
+  id        String      @id @default(uuid())
   createdAt DateTime    @default(now())
 
   visitor   Visitor?
   user      User?
   urls      Url[]
 
-  @@map("owner")
+  @@map("owned")
 }
 
 model Url {
-  id        String      @id @default(uuid()) @db.Uuid
+  id        String      @id @default(uuid())
   origUrl   String
   shortCode String      @unique
   createdAt DateTime    @default(now())
@@ -65,7 +65,7 @@ model Url {
 }
 
 model Click {
-  id        String      @id @default (uuid()) @db.Uuid
+  id        String      @id @default (uuid())
   urlId     String
   createdAt DateTime    @default(now())
 
