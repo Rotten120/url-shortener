@@ -18,10 +18,36 @@ model Visitor {
   id        String      @id @default(uuid()) @db.Uuid
   cookieId  String      @unique
   createdAt DateTime    @default(now())
-  urls      Url[]
+
+  ownerId   String      @unique
+  owner     Owner       @relation(fields: [ownerId], references: [id])
 
   @@index([cookieId])
   @@map("visitor")
+}
+
+model User {
+  id        String      @id @default(uuid()) @db.Uuid
+  email     String      @unique
+  name      String
+  password  String
+  createdAt DateTime    @default(now())
+
+  ownerId   String      @unique
+  owner     Owner       @relation(fields: [ownerId], references: [id])
+
+  @@map("users")
+}
+
+model Owner {
+  id        String      @id @default(uuid()) @db.Uuid
+  createdAt DateTime    @default(now())
+
+  visitor   Visitor?
+  user      User?
+  urls      Url[]
+
+  @@map("owner")
 }
 
 model Url {
@@ -29,10 +55,21 @@ model Url {
   origUrl   String
   shortCode String      @unique
   createdAt DateTime    @default(now())
+  clicks    Click[]
 
-  visitorId String?
-  visitor   Visitor?    @relation(fields: [visitorId], references: [cookieId], onDelete: Cascade)
+  ownerId   String
+  owner     Owner       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
-  @@index([shortCode])
+  @@index([ownerId])
   @@map("url")
+}
+
+model Click {
+  id        String      @id @default (uuid()) @db.Uuid
+  urlId     String
+  createdAt DateTime    @default(now())
+
+  url       Url         @relation(fields: [urlId], references: [id])
+
+  @@map("clicks")
 }

@@ -1,6 +1,6 @@
 import express from "express"
 import validator from "validator"
-import { prisma } from "./prismaClient.js"
+import { prisma } from "../lib/prismaClient.js"
 import { nanoid } from "nanoid"
 
 const router = express.Router();

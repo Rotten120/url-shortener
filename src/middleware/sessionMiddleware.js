@@ -1,8 +1,13 @@
-import { prisma } from "../prismaClient.js"
+import { prisma } from "../lib/prismaClient.js"
+import { setCookie } from "../lib/cookies.js"
 import { nanoid } from "nanoid"
  
 export const sessionMiddleware = async (req, res, next) => {
   try {
+    if(req.user) {
+      next();
+    }
+
     let visitorId = req.cookies?.visitorId??"";
     const visitor = await prisma.visitor.findUnique({
       where: { cookieId: visitorId }
@@ -14,11 +19,7 @@ export const sessionMiddleware = async (req, res, next) => {
         data: { cookieId: visitorId }
       });
 
-      res.cookie("visitorId", visitorId, {
-        httpOnly: true,
-        sameSite: "lax",
-        maxAge: 1000*60*60*24*365
-      });
+      await setCookie(res, "visitorId", visitorId, 1000*60*60*24*365);
 
       console.log("A new visitor. visitorId: ", visitorId);
     } else {
