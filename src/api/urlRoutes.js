@@ -2,7 +2,6 @@ import express from "express"
 import validator from "validator"
 import { prisma } from "../lib/prismaClient.js"
 import { nanoid } from "nanoid"
-import { requireOwner } from "../middleware/identityMiddleware.js"
 
 const router = express.Router();
 
@@ -31,12 +30,17 @@ router.get("/:shortCode", async (req, res) => {
   const shortCode = req.params.shortCode;
   
   const url = await prisma.url.findUnique({
-    where: { shortCode }
+    where: { shortCode },
+    select: { id: true }
   });
 
   if(!url) {
     return res.status(404).json({ message: "Invalid code" })
   }
+
+  await prisma.click.create({
+    data: { urlId: url.id }
+  });
 
   console.log(`User ${req.visitorId} was redirected to ${url.origUrl}`);
   res.redirect(url.origUrl);

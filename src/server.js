@@ -4,6 +4,7 @@ import { identityMiddleware, requireOwner } from "./middleware/identityMiddlewar
 
 import authRoutes from "./api/authRoutes.js"
 import urlRoutes from "./api/urlRoutes.js"
+import urlDataRoutes from "./api/urlDataRoutes.js"
 
 // NO RATE LIMITING YET
 
@@ -18,6 +19,7 @@ app.get("/", (req, res) => {
 
 app.use("/auth", authRoutes);
 app.use("/", identityMiddleware, requireOwner, urlRoutes);
+app.use("/url", identityMiddleware, requireAuth, shortCodeExist, requireCodeOwner, urlDataRoutes);
 
 if(process.env.NODE_ENV !== "production") {
   const PORT = process.env.PORT;

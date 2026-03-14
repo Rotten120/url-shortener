@@ -13,6 +13,34 @@ export const requireOwner = (req, res, next) => {
   next();
 }
 
+export const requireCodeOwner = (req, res, next) => {
+  if(req.urlOwner != req.ownerId) return res.status(401).send({ message: "Unauthorized" });
+  next();
+}
+
+export const shortCodeExist = async (req, res, next) => {
+  try {
+    const shortCode = req.params.shortCode;
+
+    const url = await prisma.url.findUnique({
+      where: { shortCode },
+      select: { id: true, ownerId: true }
+    });
+
+    if(!url) {
+      return res.status(404).json({ message: "Invalid code "});
+    }
+
+    req.urlId = url.id;
+    req.urlOwner = url.ownerId;
+    next();
+
+  } catch(error) {
+    console.log(error);
+    res.sendStatus(500);
+  }
+}
+
 // if token exists and valid -> req.userId and req.ownerId
 // if cookie exists and valid -> req.cookieId and req.ownerId
 
