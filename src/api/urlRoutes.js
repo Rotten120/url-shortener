@@ -14,7 +14,25 @@ router.use(
   requireOwner
 );
 
-// fetches all the urls made by the user
+/*
+ * GET /urls
+ * Description: Fetches the user's url list
+ * Middleware: identityMiddleware, requireOwner
+ *
+ * Success Response:
+ *   200 OK
+ *   {
+ *     urls: [{
+ *       shortCode: string
+ *       origUrl: string
+ *     }, ...]
+ *     urlCount: Number
+ *   }
+ *    
+ * Error:
+ *   500 server error
+ *
+ */
 router.get("/urls", async (req, res) => {
   try {
     const urls = await prisma.url.findMany({
@@ -29,34 +47,74 @@ router.get("/urls", async (req, res) => {
 
     res.json({ urls, urlCount });
   } catch(error) {
+
     console.log("Error: ", error);
     res.status(500).json({ message: "An error occurred, process was terminated" });
   }
 });
 
-// redirects the user to their link (no client side needed)
+// MOVE THIS TO SERVER.JS
+
+/*
+ * GET /:shortCode
+ * Description: Redirects user to the original url; updates 'click' analytics data
+ * Middleware: None 
+ *
+ * Path Params:
+ *   shortCode (string) - code corresponding to url
+ *
+ * Success Response:
+ *   302 redirected to found origUrl
+ *
+ * Error:
+ *   500 server error
+ *
+ */
 router.get("/:shortCode", async (req, res) => {
   const shortCode = req.params.shortCode;
   
-  const url = await prisma.url.findUnique({
-    where: { shortCode },
-    select: { id: true }
-  });
+  try {
+    const url = await prisma.url.findUnique({
+      where: { shortCode },
+      select: { id: true }
+    });
 
-  if(!url) {
-    return res.status(404).json({ message: "Invalid code" })
+    if(!url) {
+      return res.status(404).json({ message: "Invalid code" })
+    }
+
+    await prisma.click.create({
+      data: { urlId: url.id }
+    });
+
+    console.log(`User ${req.visitorId} was redirected to ${url.origUrl}`);
+    res.status(302).redirect(url.origUrl);
+
+  } catch(error) {
+    console.log(error);
+    res.status(500).json({ message: "An error occurred, please try again later" });
   }
-
-  await prisma.click.create({
-    data: { urlId: url.id }
-  });
-
-  console.log(`User ${req.visitorId} was redirected to ${url.origUrl}`);
-  res.redirect(url.origUrl);
 });
 
-// core api; shortens the url
 // CONSIDER RACE CONDITION BY USING 'FOR UPDATE' AND $transaction
+
+/*
+ * POST /shorten
+ * Description: Shortens the url
+ * Middleware: identityMiddleware, requireOwner
+ *
+ * Body Params:
+ *   url (string-url) - the url to shorten
+ *
+ * Success Response:
+ *   201 successful link shortened
+ *
+ * Error:
+ *   400 invalid url format
+ *   409 maximum owned urls reached
+ *   500 server error
+ *
+ */
 router.post("/shorten", async (req, res) => {
   const origUrl = req.body.url;
   let shortCode = "";
@@ -91,7 +149,24 @@ router.post("/shorten", async (req, res) => {
   }
 });
 
-// deletes the url in the database
+// CONSIDER CASCADING WITH CLICKS IF AUTH-BASED
+
+/*
+ * DELETE /:shortCode
+ * Description: Deletes shortCode and analytics if there is one
+ * Middleware: identityMiddleware, requireOwner
+ *
+ * Body Params:
+ *   shortCode (string) - code corresponding to url
+ *
+ * Success Response:
+ *   204 deleted successfully
+ *
+ * Error:
+ *   404 link does not exist
+ *   500 server error
+ *
+ */
 router.delete("/:shortCode", async (req, res) => {
   const shortCode = req.params.shortCode;
 

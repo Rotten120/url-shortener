@@ -1,6 +1,7 @@
 import express from "express"
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
+import validator from "validator"
 import { prisma } from "../lib/prismaClient.js"
 import { hashPassword, verifyPassword } from "../lib/auth.js"
 import { setCookie } from "../lib/cookies.js"
@@ -37,6 +38,10 @@ router.post('/register', async (req, res) => {
 
     if(!name || !email || !password) {
       return res.status(400).json({ message: "Name, email, and password are required fields" });
+    }
+
+    if(!validator.isEmail(email)) {
+      return res.status(400).json({ message: "Email is invalid" });
     }
 
     const existingUser = await prisma.user.findUnique({where: {email}});
@@ -100,9 +105,9 @@ router.post('/register', async (req, res) => {
  *     token: string
  *   }
  *
- *  Error:
- *    400 missing body params
- *    409 wrong login credentials
+ * Error:
+ *   400 missing body params
+ *   409 wrong login credentials
  *
  */
 router.post("/login", async (req, res) => {
