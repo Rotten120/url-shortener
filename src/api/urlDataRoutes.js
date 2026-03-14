@@ -1,8 +1,20 @@
 import express from "express"
 import { prisma } from "../lib/prismaClient.js"
-import { requireAuth, requireOwner } from "../middleware/identityMiddleware.js"
+import {
+  identityMiddleware,
+  requireAuth,
+  shortCodeExist,
+  requireCodeOwner
+} from "../middleware/identityMiddleware.js"
 
 const router = express.Router();
+
+router.use(
+  identityMiddleware,
+  requireAuth,
+  shortCodeExist,
+  requireCodeOwner
+);
 
 router.get("/:shortCode/clicks/all", async (req, res) => {
   const dates = await prisma.click.findMany({
@@ -10,7 +22,11 @@ router.get("/:shortCode/clicks/all", async (req, res) => {
     select: { createdAt: true }
   });
 
-  return res.send({ dates, count: dates.length });
+  const count = await prisma.clicks.count({
+    where: { urlId: req.urlId }
+  });
+
+  return res.send({ dates, clickClount: count });
 });
 
 router.get("/:shortCode/clicks", async (req, res) => {
@@ -31,7 +47,7 @@ const mins = Number(req.query ?. interval ?? 10);
     where: { urlId: req.urlId }
   });
 
-  return res.send({ dates, count });
+  return res.send({ dates, clickCount: count });
 });
 
 export default router;

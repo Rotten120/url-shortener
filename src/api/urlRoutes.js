@@ -2,8 +2,17 @@ import express from "express"
 import validator from "validator"
 import { prisma } from "../lib/prismaClient.js"
 import { nanoid } from "nanoid"
+import {
+  identityMiddleware,
+  requireOwner
+} from "../middleware/identityMiddleware.js"
 
 const router = express.Router();
+
+router.use(
+  identityMiddleware,
+  requireOwner
+);
 
 // fetches all the urls made by the user
 router.get("/urls", async (req, res) => {

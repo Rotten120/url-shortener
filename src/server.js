@@ -1,6 +1,5 @@
 import express from "express"
 import cookieParser from "cookie-parser"
-import { identityMiddleware, requireOwner } from "./middleware/identityMiddleware.js"
 
 import authRoutes from "./api/authRoutes.js"
 import urlRoutes from "./api/urlRoutes.js"
@@ -18,8 +17,8 @@ app.get("/", (req, res) => {
 });
 
 app.use("/auth", authRoutes);
-app.use("/", identityMiddleware, requireOwner, urlRoutes);
-app.use("/url", identityMiddleware, requireAuth, shortCodeExist, requireCodeOwner, urlDataRoutes);
+app.use("/", urlRoutes);
+app.use("/url", urlDataRoutes);
 
 if(process.env.NODE_ENV !== "production") {
   const PORT = process.env.PORT;
