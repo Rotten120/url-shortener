@@ -3,21 +3,64 @@ import { verifyToken } from "../lib/auth.js"
 import { setCookie } from "../lib/cookies.js"
 import { nanoid } from "nanoid"
 
+/*
+ * requireAuth
+ * Description: Validates if req has the userId attribute
+ *
+ * Error:
+ *   401 userId is not found or null
+ */
 export const requireAuth = (req, res, next) => {
   if(!req.userId) return res.status(401).send({ message: "Unauthorized" });
   next();
 }
 
+/*
+ * requireOwner
+ * Description: Validates if req has the ownerId attribute
+ *
+ * Error:
+ *   401 ownerId is not found or null
+ *
+ * Note:
+ *   May not be used if route already has the 'requieAuth' middleware
+ *
+ */
 export const requireOwner = (req, res, next) => {
   if(!req.ownerId) return res.status(401).send({ message: "Unauthorized" });
   next();
 }
 
+/*
+ * requireCodeOwner
+ * Description: Validates if the req.urlOwner and req.ownerId matches
+ *              url is owned by the same user
+ * 
+ * Error:
+ *   401 url is not owned by user
+ *
+ */
 export const requireCodeOwner = (req, res, next) => {
   if(req.urlOwner != req.ownerId) return res.status(401).send({ message: "Unauthorized" });
   next();
 }
 
+/*
+ * shortCodeExist
+ * Description: Extracts urlId if URL shortcode exists in db
+ *
+ * Path Params:
+ *   shortCode (string)
+ * 
+ * Success Response:
+ *   req.urlId - id of the corresponding URL
+ *   req.urlOwner - id of the url owner
+ *
+ * Error:
+ *   404 invalid code
+ *   500 server error
+ *
+ */
 export const shortCodeExist = async (req, res, next) => {
   try {
     const shortCode = req.params.shortCode;
@@ -41,8 +84,35 @@ export const shortCodeExist = async (req, res, next) => {
   }
 }
 
-// if token exists and valid -> req.userId and req.ownerId
-// if cookie exists and valid -> req.cookieId and req.ownerId
+/*
+ * identityMiddleware
+ * Description: Extracts auth token if exist and valid, otherwise
+ *              extracts the visitor token instead
+ *
+ * Cookie Params:
+ *   token: JWT
+ *   visitor: string
+ *
+ * Token Params:
+ *   userId: string
+ *   
+ * Success Response:
+ *   (1) if auth cookie exists and auth token is valid:
+ *     req.userId
+ *     req.ownerId
+ *   (2) otherwise, if visitor cookie exists and
+ *       visitor token is valid:
+ *     req.visitorId
+ *     req.ownerId
+ *
+ * Error:
+ *   401 invalid token
+ *   404 user/visitor not found
+ *   500 server error
+ *
+ * Note:
+ *   (1) new visitor id could have collisions 
+ */
 
 export const identityMiddleware = async (req, res, next) => {
   //AUTH-TOKEN LAYER

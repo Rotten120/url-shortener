@@ -12,6 +12,7 @@ const router = express.Router();
 /*
  * POST /auth/register
  * Description: Creates a new account, saves token in cookies if successful
+ *              Visitor data is migrated to new user if there is visitor token
  * Middleware: None
  *
  * Body Params:
@@ -51,7 +52,7 @@ router.post('/register', async (req, res) => {
 
     const hashedPassword = await hashPassword(password);
 
-    //migrating cookie data to user
+    //migrating visitor data to user
     let user;
     const cookieId = req.cookies ?. visitorId ?? "";
     const visitor = await prisma.visitor.findUnique({
@@ -157,7 +158,7 @@ router.post("/logout", async (req, res) => {
 /*
  * GET /auth/me
  * Description: Fetches user's primary id
- * Middleware: authMiddleware
+ * Middleware: identityMiddleware, requireAuth
  *
  * Success Response:
  *   200 OK
