@@ -53,51 +53,6 @@ router.get("/urls", async (req, res) => {
   }
 });
 
-// MOVE THIS TO SERVER.JS
-
-/*
- * GET /:shortCode
- * Description: Redirects user to the original url; updates 'click' analytics data
- * Middleware: None 
- *
- * Path Params:
- *   shortCode (string) - code corresponding to url
- *
- * Success Response:
- *   302 redirected to found origUrl
- *
- * Error:
- *   500 server error
- *
- */
-router.get("/:shortCode", async (req, res) => {
-  const shortCode = req.params.shortCode;
-  
-  try {
-    const url = await prisma.url.findUnique({
-      where: { shortCode },
-      select: { id: true }
-    });
-
-    if(!url) {
-      return res.status(404).json({ message: "Invalid code" })
-    }
-
-    await prisma.click.create({
-      data: { urlId: url.id }
-    });
-
-    console.log(`User ${req.visitorId} was redirected to ${url.origUrl}`);
-    res.status(302).redirect(url.origUrl);
-
-  } catch(error) {
-    console.log(error);
-    res.status(500).json({ message: "An error occurred, please try again later" });
-  }
-});
-
-// CONSIDER RACE CONDITION BY USING 'FOR UPDATE' AND $transaction
-
 /*
  * POST /shorten
  * Description: Shortens the url
@@ -114,6 +69,8 @@ router.get("/:shortCode", async (req, res) => {
  *   409 maximum owned urls reached
  *   500 server error
  *
+ * Note:
+ *   Consider race condition by using 'for update' and $transaction
  */
 router.post("/shorten", async (req, res) => {
   const origUrl = req.body.url;
@@ -149,8 +106,6 @@ router.post("/shorten", async (req, res) => {
   }
 });
 
-// CONSIDER CASCADING WITH CLICKS IF AUTH-BASED
-
 /*
  * DELETE /:shortCode
  * Description: Deletes shortCode and analytics if there is one
@@ -166,6 +121,8 @@ router.post("/shorten", async (req, res) => {
  *   404 link does not exist
  *   500 server error
  *
+ * Note:
+ *   Consider cascading with clicks if auth-based
  */
 router.delete("/:shortCode", async (req, res) => {
   const shortCode = req.params.shortCode;

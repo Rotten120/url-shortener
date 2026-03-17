@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser"
 import authRoutes from "./api/authRoutes.js"
 import urlRoutes from "./api/urlRoutes.js"
 import urlDataRoutes from "./api/urlDataRoutes.js"
+import redirectRoutes from "./api/redirectRoutes.js"
 
 // NO RATE LIMITING YET
 
@@ -17,6 +18,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/auth", authRoutes);
+app.use("/", redirectRoutes);
 app.use("/", urlRoutes);
 app.use("/url", urlDataRoutes);
 
